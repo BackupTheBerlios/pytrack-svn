@@ -1,0 +1,6 @@
+Packages needed:
+sqlite
+sqlite-dev
+pysqlite
+pyserial
+wxpython 2.5

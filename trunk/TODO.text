@@ -1,0 +1,2 @@
+- gpx import/export of tracks (gpx is a xml file... we have to find a dtd for it ;-)
+- draw tracks on canvas (with proper scaling)
