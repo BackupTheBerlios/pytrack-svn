@@ -140,6 +140,10 @@ class PyTrackFrame(wx.Frame):
 
                 if dlg2.ShowModal() == wx.ID_OK:
                     t[0].trk_ident = dlg2.GetValue()
+                else:
+                    #cancel button has been pressed. jump to the next track
+                    dlg2.Destroy()
+                    continue
                 dlg2.Destroy()
             ret = self.db.WriteTrack(t)
             if ret == -1:
@@ -196,7 +200,7 @@ class PyTrackFrame(wx.Frame):
         self.Destroy()
 
         if(self.GPSInit):
-            self.garmin.Close()
+            self.phys.Close()
             pass
 
     def OnNotYetImplemented(self, event):

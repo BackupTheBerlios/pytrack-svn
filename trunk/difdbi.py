@@ -85,7 +85,7 @@ class Database:
             if sqlError:
                 print sqlError
             else:
-                if len(self.FetchAll())>1:
+                if len(self.FetchAll())>=1:
                     #trackname exists already.
                     return -2
                 else:
@@ -97,6 +97,9 @@ class Database:
                     else:
                         track = track[1:]
                         for trackpoint in track:
+                            #fix problem if no altitude is found in a track:
+                            if trackpoint.alt > 100000:
+                                trackpoint.alt=0
                             sqlError = self.Sql("INSERT INTO trackpoints VALUES (%d, %d, %f, %f, '%s', %f, %d)"%( self.NextId("trackpoints"), trackid, trackpoint.slat, trackpoint.slon, trackpoint.time, trackpoint.alt, trackpoint.new_trk))
                         self.Commit()
                         return 0
@@ -259,7 +262,11 @@ class Database:
         """ Set the serial device in the db. """
         sqlError = self.Sql("UPDATE config SET value='%s' WHERE name='serialDevice'"%(serialDevice,))
         if sqlError:
-            return -1
+            #perhaps the entry does not exist?
+            print serialDevice
+            sqlError = self.Sql("INSERT INTO config VALUES ('serialDevice', '%s')"%(serialDevice,))
+            if sqlError:
+                return -1
         self.Commit()
         return 0
 

@@ -29,6 +29,7 @@ class TrackNotebook(wx.Notebook):
 
         self.plotPanel = PlotPanel(self, -1, trackId)
         self.AddPage(self.plotPanel, "Graphs")
+        
 
         self.drawTrack = DrawMapWindow(self, -1, trackId)
         self.AddPage(self.drawTrack, "Map")

@@ -70,5 +70,6 @@ class ConfigDialog(wx.Dialog):
         sizer.Fit(self)
 
     def OnOkButton(self, event):
-        self.db.SetSerialDevice(self.serialText.GetValue())
+        if self.db.SetSerialDevice(self.serialText.GetValue()) == -1:
+            print "Could not write serial device into DB"
         self.EndModal(wx.ID_OK)

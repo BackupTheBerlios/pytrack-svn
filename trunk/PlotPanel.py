@@ -1,14 +1,6 @@
 import wx
+import wx.lib.plot
 import garmin
-
-import matplotlib
-matplotlib.use('WX')
-from matplotlib.backends.backend_wx import Toolbar, FigureCanvasWx,\
-     FigureManager
-import matplotlib.matlab
-from matplotlib.figure import Figure
-from matplotlib.axes import Subplot
-import matplotlib.numerix as numpy
 
 from difdbi import *
 
@@ -21,21 +13,16 @@ class PlotPanel(wx.Panel):
         DBOpen()
         self.db = CachedDb()
 
-        self.fig = Figure((5,4), 75)
-        self.canvas = FigureCanvasWx(self, -1, self.fig)
-        self.toolbar = Toolbar(self.canvas)
-        self.toolbar.Realize()
-
-        # On Windows, default frame size behaviour is incorrect
-        # you don't need this under Linux
-        tw, th = self.toolbar.GetSizeTuple()
-        fw, fh = self.canvas.GetSizeTuple()
-        self.toolbar.SetSize(wx.Size(fw, th))
-
-        # Create a figure manager to manage things
-        self.figmgr = FigureManager(self.canvas, 1, self)
-        self.axes = self.figmgr.add_subplot(111)
-        self.axes.hold(0)
+        #double pack the plotCanvas into panel or we will
+        #get a problem with the size...
+        self.plotPanel = wx.Panel(self, -1)
+        self.plotPlotPanel = wx.Panel(self.plotPanel, -1)
+        self.canvas = wx.lib.plot.PlotCanvas(self.plotPanel)
+        self.canvas.SetSize((200, 200))
+        s = wx.BoxSizer(wx.VERTICAL)
+        s.Add(self.canvas, 1, wx.GROW)
+        self.plotPanel.SetSizer(s)
+        
 
         # Create a Choice to select the graph
         self.graphs = ["Time / Altitude",
@@ -52,17 +39,22 @@ class PlotPanel(wx.Panel):
         # Add the Choice at the top.
         sizer.Add(self.ch, 0, wx.GROW)
         # This way of adding to sizer allows resizing
-        sizer.Add(self.canvas, 1, wx.LEFT|wx.TOP|wx.GROW)
-        # Best to allow the toolbar to resize!
-        sizer.Add(self.toolbar, 0, wx.GROW)
+        sizer.Add(self.plotPanel, 1, wx.BOTTOM|wx.TOP|wx.GROW, 2)
         
         self.SetSizer(sizer)
         self.Fit()
+
+        self.Bind(wx.EVT_SIZE, self.OnSize)
+         
         self.plotTimeAltitude()
         self.UpdatePanel(self.trackId)
+
+    def OnSize(self, event):
+        #we have to manually adjust the plot canvas size
+        self.canvas.SetSize(self.plotPanel.GetClientSize())
         
     def plotTimeAltitude(self):
-        """ Plot a Time / Altitude Graph with matplotlib """
+        """ Plot a Time / Altitude Graph with  """
         time = []
         alt = []
         #get the list of trackpoints
@@ -71,18 +63,12 @@ class PlotPanel(wx.Panel):
             #calculate each time and altitude and add them into a list
             time.append(int(tp[4])-int(tplist[0][4]))
             alt.append(tp[3])
-        #set text for plot
-        self.axes.plot(time, alt)
-        self.axes.grid(True)
-        self.axes.set_xlabel("Seconds")
-        self.axes.set_ylabel("Meters")
-        self.axes.set_title("Time / Altitude Graph")
 
-        self.toolbar.update()
-        self.Refresh()
+        self.PlotData("Time / Altitude", "Time in min", "Altitude in m", time, alt)
+        
 
     def plotTimeSpeed(self):
-        """ Plot a Time / Speed Graph with matplotlib """
+        """ Plot a Time / Speed Graph with  """
         time = []
         speed = []
         tplist = self.db.ListTrackPoints(self.trackId)
@@ -109,14 +95,8 @@ class PlotPanel(wx.Panel):
                 p2=p1
             lastTime = currentTime
             time.append(currentTime)
-        self.axes.plot(time, speed)
-        self.axes.grid(True)
-        self.axes.set_xlabel("Seconds")
-        self.axes.set_ylabel("km/s")
-        self.axes.set_title("Time / Speed Graph")
 
-        self.toolbar.update()
-        self.Refresh()
+        self.PlotData("Time / Speed", "Time in min", "Speed in km/h", time, speed)
 
     def plotDistanceAltitude(self):
         """ Plot a Distance / Altitude Graph """
@@ -140,14 +120,8 @@ class PlotPanel(wx.Panel):
                 lastDistance+=garmin.distance(p1, p2)
                 p2=p1
             distance.append(lastDistance)
-        self.axes.plot(distance, alt)
-        self.axes.grid(True)
-        self.axes.set_xlabel("Meters")
-        self.axes.set_ylabel("Meters")
-        self.axes.set_title("Distance / Altitude Graph")
 
-        self.toolbar.update()
-        self.Refresh()
+        self.PlotData("Distance / Altitude", "Distance in m", "Altitude in m", distance, alt)
 
     def plotTimeTotalDistance(self):
         """ Plot a Time / Total Distance Graph """
@@ -171,14 +145,8 @@ class PlotPanel(wx.Panel):
                 lastDistance+=garmin.distance(p1, p2)
                 p2=p1
             distance.append(lastDistance)
-        self.axes.plot(time, distance)
-        self.axes.grid(True)
-        self.axes.set_xlabel("Meters")
-        self.axes.set_ylabel("Meters")
-        self.axes.set_title("Distance / Altitude Graph")
 
-        self.toolbar.update()
-        self.Refresh()
+        self.PlotData("Time / Distance", "Time in min", "Distance in m", time, distance)
 
     def GetToolBar(self):
         # You will need to override GetToolBar if you are using an 
@@ -205,7 +173,29 @@ class PlotPanel(wx.Panel):
         self.state = event.GetString()
         self.UpdatePanel(self.trackId)
         
-            
+    def resetDefaults(self):
+        """Just to reset the fonts back to the PlotCanvas defaults"""
+        self.canvas.SetFont(wx.Font(10,wx.SWISS,wx.NORMAL,wx.NORMAL))
+        self.canvas.SetFontSizeAxis(10)
+        self.canvas.SetFontSizeLegend(7)
+        self.canvas.SetXSpec('auto')
+        self.canvas.SetYSpec('auto')
+
+    def PlotData(self, title, xaxis, yaxis, xData, yData):
+        #we have to check this or plot will crash...
+        if min(yData) != max(yData) and min(xData) != min(yData):
+
+            data1 = []
+            for i in range(len(xData)):
+                data1.append((xData[i], yData[i]))
+
+            lines = wx.lib.plot.PolyLine(data1, colour='red')
+
+            self.resetDefaults()
+            self.canvas.Draw(wx.lib.plot.PlotGraphics([lines], title, xaxis, yaxis))
+        else:
+            self.canvas.Clear()
+
 if __name__ == '__main__':
     app = wx.PySimpleApp(0)
     frame = wx.Frame(None, -1, "Test Plot")
