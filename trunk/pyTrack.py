@@ -12,7 +12,6 @@
 import wx
 import time
 import sys
-sys.path.append("pygarmin")
 import garmin
 
 from Config import *
