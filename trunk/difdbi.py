@@ -5,7 +5,7 @@ import types
 from sqlite import *
 from sqlite import DatabaseError
 
-def DBOpen(dblogin):
+def DBOpen(dblogin='db.dat'):
     global _db
     if Database.db == None:
         try:
@@ -67,6 +67,9 @@ class Database:
     def FetchOne(self):
         return self.cursor.fetchone()
 
+###############
+# Tracks
+###############
     def WriteTrack(self, track):
         """ Writes a garmin track into the database. """
         if len(track) > 0:
@@ -111,31 +114,6 @@ class Database:
         else:
             return self.FetchAll()
             
-        
-    def ListLabels(self):
-        """ Returns a list with labels and their id. """
-        sqlError = self.Sql("SELECT id, name FROM labels")
-        if sqlError:
-            print sqlError
-            return []
-        else:
-            return self.FetchAll()
-        
-    def ListTrackPoints(self, trackId):
-        """ Returns a list of trackpoints for the given list id. """
-        sqlError = self.Sql("SELECT id, slon, slat, alt, time FROM trackpoints WHERE trackid=%d"%trackId)
-        if sqlError:
-            print sqlError
-            return []
-        else:
-            return self.FetchAll()
-
-    def DeleteTrackPoints(self, trackPointId):
-        """ Deletes a track point from the list. """
-        sqlError = self.Sql("DELETE FROM trackpoints WHERE id="+str(trackPointId))
-        if sqlError:
-            print sqlError
-        
     def DeleteTrack(self, trackId):
         """ Deletes a track and his associated track points. """
         sqlError = self.Sql("DELETE FROM trackpoints WHERE trackid=%d"%(trackId,))
@@ -156,6 +134,68 @@ class Database:
         else:
             self.Commit()
 
+#############
+# LABELS
+#############
+    def ListLabels(self, trackId=-1):
+        """ Returns a list with labels and their id. """
+        if trackId == -1:
+            sqlError = self.Sql("SELECT id, name, description FROM labels")
+        else:
+            sqlError = self.Sql("""
+            SELECT l.id, l.name, l.description
+            FROM labels AS l, labeltrackrelation AS ltr
+            WHERE l.id=ltr.labelid AND ltr.trackid=%d
+            """%(trackId,))
+        if sqlError:
+            print sqlError
+            return []
+        else:
+            return self.FetchAll()
+
+    def AddLabel(self, trackId, label, description):
+        """ Adds a label to a track. """
+        #test if the label does not exist already
+        sqlError = self.Sql("SELECT id FROM labels WHERE name='%s'"%(label))
+        if sqlError:
+            print sqlError
+            return
+        [id] = self.FetchOne()
+        if id:
+            labelId = id
+        else:
+            #label does not exist. create it
+            labelId = self.NextId("labels")
+            sqlError = self.Sql("INSERT INTO labels VALUES (%d, '%s', '%s')"%(labelId, label, description))
+            if sqlError:
+                print sqlError
+                return
+        #write the relation into the db
+        sqlError = self.Sql("INSERT INTO labeltrackrelation VALUES (%d, %d)"%(labelId, trackId))
+        if sqlError:
+            print sqlError
+            return
+        self.Commit()
+
+            
+#############
+# TrackPoints
+#############
+    def ListTrackPoints(self, trackId):
+        """ Returns a list of trackpoints for the given list id. """
+        sqlError = self.Sql("SELECT id, slon, slat, alt, time FROM trackpoints WHERE trackid=%d"%trackId)
+        if sqlError:
+            print sqlError
+            return []
+        else:
+            return self.FetchAll()
+
+    def DeleteTrackPoints(self, trackPointId):
+        """ Deletes a track point from the list. """
+        sqlError = self.Sql("DELETE FROM trackpoints WHERE id="+str(trackPointId))
+        if sqlError:
+            print sqlError
+        
     def NextId(self, table):
         """ Returns the next id of the given table. """
         self.Sql("SELECT max(id)+1 FROM %s"% table)
@@ -205,7 +245,7 @@ if __name__ == '__main__':
 
     sqlError = db.Sql('''
     CREATE TABLE labeltrackrelation (
-      labelid INT PRIMARY KEY REFERENCES labels(id),
+      labelid INT REFERENCES labels(id),
       trackid INT REFERENCES tracks(id)
     )
     ''')

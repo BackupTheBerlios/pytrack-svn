@@ -27,7 +27,7 @@ class PyTrackFrame(wx.Frame):
                  size=wx.DefaultSize, style=wx.DEFAULT_FRAME_STYLE):
         """ Initialize the class """
         wx.Frame.__init__(self, parent, ID, title, pos, size, style)
-        DBOpen('test.dat')
+        DBOpen()
         self.db = CachedDb()
 
         self.parent = parent

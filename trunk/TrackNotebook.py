@@ -22,12 +22,15 @@ class TrackNotebook(wx.Notebook):
         self.sp = StatisticsPanel(self, -1, trackId)
         self.AddPage(self.sp, "Statistics")
 
+        self.lp = LabelPanel(self, -1, trackId)
+        self.AddPage(self.lp, "Labels")
+
     def SetTrackId(self, id):
         """ Sets a new track id and updates the panels. """
         self.trackId = id
         self.tplp.Update(self.trackId)
         self.sp.Update(self.trackId)
-        
+        self.lp.Update(self.trackId)
 
 class TrackPointListPanel(wx.Panel):
     """
@@ -40,14 +43,14 @@ class TrackPointListPanel(wx.Panel):
 
         self.trackId = trackId
         
-        DBOpen('test.dat')
+        DBOpen()
         self.db = CachedDb()
 
         #visual stuff
         mainSizer = wx.BoxSizer(wx.VERTICAL)
 
         self.trackPointTable = TrackPointTable(self)
-        mainSizer.Add(self.trackPointTable, 1, wx.EXPAND|wx.ALL, 5)
+        mainSizer.Add(self.trackPointTable, 1, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 5)
 
         #buttons to remove/add trackpoints
         lowerSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -63,7 +66,7 @@ class TrackPointListPanel(wx.Panel):
         wx.EVT_BUTTON(self, id, self.OnApplyChanges)
         lowerSizer.Add(self.applyChangesButton, 0, wx.ALL, 5)
 
-        mainSizer.Add(lowerSizer, 0, wx.ALL, 5)
+        mainSizer.Add(lowerSizer, 0, wx.ALL, 0)
         
         self.SetSizer(mainSizer)
         self.Update(self.trackId)
@@ -94,7 +97,7 @@ class StatisticsPanel(wx.Panel):
         wx.Panel.__init__(self, parent, id)
         self.trackId = trackId
 
-        DBOpen('test.dat')
+        DBOpen()
         self.db = CachedDb()
 
         self.totalDistanceLabel = wx.StaticText(self, -1, " m", (120, 10), (120,-1), style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
@@ -130,3 +133,71 @@ class StatisticsPanel(wx.Panel):
         self.averageSpeedLabel.SetLabel("%7.1f km/h"%(self.averageSpeed,))
         
         
+class LabelPanel(wx.Panel):
+    """
+    This panel is used to show labels of an
+    associated track.
+    """
+
+    def __init__(self, parent, id, trackId):
+        wx.Panel.__init__(self, parent, id)
+        self.trackId = trackId
+
+        DBOpen()
+        self.db = CachedDb()
+
+         #visual stuff
+        mainSizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.lc = wx.ListCtrl(self, -1, style=wx.LC_REPORT)
+        mainSizer.Add(self.lc, 1, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 5)
+        self.lc.InsertColumn(0, "Id")
+        self.lc.InsertColumn(1, "Name")
+        self.lc.InsertColumn(2, "description")
+
+        lowerSizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.labelNameBox = wx.ComboBox(self, -1)
+        lowerSizer.Add(self.labelNameBox)
+
+        id = wx.NewId()
+        addLabelButton = wx.Button(self, id, "Add Label")
+        wx.EVT_BUTTON(self, id, self.OnAddLabelButton)
+        lowerSizer.Add(addLabelButton, 0, wx.ALL, 5)
+
+        id = wx.NewId()
+        deleteLabelButton = wx.Button(self, id, "Delete Label")
+        wx.EVT_BUTTON(self, id, self.OnDeleteLabelButton)
+        lowerSizer.Add(deleteLabelButton, 0, wx.ALL|wx.ALIGN_RIGHT, 5)
+
+        mainSizer.Add(lowerSizer, 0, wx.ALL|wx.EXPAND, 0)
+
+        self.Update(self.trackId)
+
+        self.SetSizer(mainSizer)
+
+    def Update(self, trackId):
+        self.trackId = trackId
+
+        self.lc.DeleteAllItems()
+        labels = self.db.ListLabels(self.trackId)
+        for id, label, descr in labels:
+            index = self.lc.InsertStringItem(sys.maxint, str(id))
+            self.lc.SetStringItem(index, 1, str(label))
+            self.lc.SetStringItem(index, 2, str(descr))
+        self.lc.SetColumnWidth(0, wx.LIST_AUTOSIZE)
+        self.lc.SetColumnWidth(1, wx.LIST_AUTOSIZE)
+
+        #update labelnamebox
+        self.labelNameBox.Clear()
+        labels = self.db.ListLabels()
+        for id, label, description in labels:
+            self.labelNameBox.Append(label)
+
+    def OnAddLabelButton(self, event):
+        if self.labelNameBox.GetValue() != "":
+            self.db.AddLabel(self.trackId, self.labelNameBox.GetValue(), "")
+        self.Update(self.trackId)
+
+    def OnDeleteLabelButton(self, event):
+        print self.lc.GetStringSelection()

@@ -9,7 +9,7 @@ class TrackPanel(wx.Panel):
     def __init__(self, parent, id, trackNotebook):
         wx.Panel.__init__(self, parent, id, size=(200, 80))
 
-        DBOpen('test.dat')
+        DBOpen()
         self.db = CachedDb()
 
         self.trackNotebook = trackNotebook
@@ -25,7 +25,7 @@ class TrackPanel(wx.Panel):
 
         mainSizer = wx.BoxSizer(wx.VERTICAL)
 
-        mainSizer.Add(self.labelChoice, 0, wx.ALL|wx.EXPAND, 0)
+        mainSizer.Add(self.labelChoice, 0, wx.BOTTOM|wx.EXPAND, 5)
         mainSizer.Add(self.list, 1, wx.ALL|wx.EXPAND, 0)
 
         self.SetSizer(mainSizer)
