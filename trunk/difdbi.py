@@ -5,9 +5,14 @@ import types
 import os
 from sqlite import *
 from sqlite import DatabaseError
+import Config
 
-def DBOpen(dblogin=os.path.join('database', 'db.dat')):
+def DBOpen(dblogin=""):
     global _db
+
+    if not dblogin:
+        dblogin = Config.dbfile
+    
     if Database.db == None:
         try:
             Database.db = connect(dblogin)
@@ -225,9 +230,44 @@ class Database:
             id=0
         return id
 
+##################
+# Config
+##################
 
-if __name__ == '__main__':
-    DBOpen('test.dat')
+    def GetSerialDevice(self):
+        """ Retreives the serial device from the
+        db. """
+        sqlError = self.Sql("SELECT value FROM config WHERE name='serialDevice'")
+        if sqlError:
+            return ""
+
+        sd = self.FetchOne()
+        if sd:
+            return sd[0]
+        else:
+            return ""
+
+    def SetSerialDevice(self, serialDevice):
+        """ Set the serial device in the db. """
+        sqlError = self.Sql("UPDATE config SET value='%s' WHERE name='serialDevice'"%(serialDevice,))
+        if sqlError:
+            return -1
+        self.Commit()
+        return 0
+
+    def GetFirstTrack(self):
+        """ Gets the track with the lowest id """
+        sqlError = self.Sql("SELECT min(id) FROM tracks")
+        if sqlError:
+            return -1
+        track = self.FetchOne()
+        if track:
+            return track[0]
+        else:
+            return -1
+
+def createDb(dbfile):
+    DBOpen(dbfile)
     db = CachedDb()
     sqlError = db.Sql('''
     CREATE TABLE tracks (
@@ -273,6 +313,15 @@ if __name__ == '__main__':
     if sqlError:
         print sqlError
 
+    sqlError = db.Sql('''
+    CREATE TABLE config (
+      name VARCHAR(100) PRIMARY KEY,
+      value VARCHAR(255)
+      )
+      ''')
+    if sqlError:
+        print sqlError
+
     sqlError = db.Sql("INSERT INTO tracks VALUES (1, 'First Test', 'just a test', '12/8/04 12:00')")
     if sqlError:
         print sqlError
@@ -288,7 +337,13 @@ if __name__ == '__main__':
     sqlError = db.Sql("INSERT INTO labeltrackrelation VALUES (1, 2)")
     if sqlError:
         print sqlError
+    sqlError = db.Sql("INSERT INTO config VALUES ('serialDevice', '/dev/tty.usbserial0')")
+    if sqlError:
+        print sqlError
     db.Commit()
     DBClose()
 
     print "Done."
+
+if __name__ == '__main__':
+    createDb("db.dat")

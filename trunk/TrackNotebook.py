@@ -4,6 +4,7 @@ sys.path.append("garmin")
 import garmin
 from difdbi import *
 from TrackPointTable import *
+from DrawMapWindow import DrawMapWindow
 from PlotPanel import *
 
 class TrackNotebook(wx.Notebook):
@@ -29,6 +30,9 @@ class TrackNotebook(wx.Notebook):
         self.plotPanel = PlotPanel(self, -1, trackId)
         self.AddPage(self.plotPanel, "Graphs")
 
+        self.drawTrack = DrawMapWindow(self, -1, trackId)
+        self.AddPage(self.drawTrack, "Map")
+
     def SetTrackId(self, id):
         """ Sets a new track id and updates the panels. """
         self.trackId = id
@@ -36,6 +40,7 @@ class TrackNotebook(wx.Notebook):
         self.sp.UpdatePanel(self.trackId)
         self.lp.UpdatePanel(self.trackId)
         self.plotPanel.UpdatePanel(self.trackId)
+        self.drawTrack.UpdateTrack(self.trackId)
         
 class TrackPointListPanel(wx.Panel):
     """

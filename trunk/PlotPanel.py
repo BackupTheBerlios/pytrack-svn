@@ -21,10 +21,6 @@ class PlotPanel(wx.Panel):
         DBOpen()
         self.db = CachedDb()
 
-        #self.state="timealt"
-        #self.state="timedistance"
-        self.state="timespeed"
-        
         self.fig = Figure((5,4), 75)
         self.canvas = FigureCanvasWx(self, -1, self.fig)
         self.toolbar = Toolbar(self.canvas)
@@ -40,24 +36,42 @@ class PlotPanel(wx.Panel):
         self.figmgr = FigureManager(self.canvas, 1, self)
         self.axes = self.figmgr.add_subplot(111)
         self.axes.hold(0)
+
+        # Create a Choice to select the graph
+        self.graphs = ["Time / Altitude",
+                       "Distance / Altitude",
+                       "Time / Total Distance",
+                       "Time / Speed"]
+        self.state = self.graphs[0]
+        self.ch = wx.Choice(self, -1, choices = self.graphs)
+        self.ch.SetSelection(0)
+        self.Bind(wx.EVT_CHOICE, self.OnGraphChosen, self.ch)
+
         # Now put all into a sizer
         sizer = wx.BoxSizer(wx.VERTICAL)
+        # Add the Choice at the top.
+        sizer.Add(self.ch, 0, wx.GROW)
         # This way of adding to sizer allows resizing
         sizer.Add(self.canvas, 1, wx.LEFT|wx.TOP|wx.GROW)
         # Best to allow the toolbar to resize!
         sizer.Add(self.toolbar, 0, wx.GROW)
+        
         self.SetSizer(sizer)
         self.Fit()
         self.plotTimeAltitude()
         self.UpdatePanel(self.trackId)
         
     def plotTimeAltitude(self):
+        """ Plot a Time / Altitude Graph with matplotlib """
         time = []
         alt = []
+        #get the list of trackpoints
         tplist = self.db.ListTrackPoints(self.trackId)
         for tp in tplist:
+            #calculate each time and altitude and add them into a list
             time.append(int(tp[4])-int(tplist[0][4]))
             alt.append(tp[3])
+        #set text for plot
         self.axes.plot(time, alt)
         self.axes.grid(True)
         self.axes.set_xlabel("Seconds")
@@ -68,6 +82,7 @@ class PlotPanel(wx.Panel):
         self.Refresh()
 
     def plotTimeSpeed(self):
+        """ Plot a Time / Speed Graph with matplotlib """
         time = []
         speed = []
         tplist = self.db.ListTrackPoints(self.trackId)
@@ -75,6 +90,7 @@ class PlotPanel(wx.Panel):
         for tp in tplist:
             currentTime = int(tp[4])-int(tplist[0][4])
             if not p2:
+                #if p2 does not exist yet, we are at the first point
                 p2 = garmin.D301()
                 p2.slon = tp[1]
                 p2.slat = tp[2]
@@ -85,6 +101,7 @@ class PlotPanel(wx.Panel):
                 p1.slon = tp[1]
                 p1.slat = tp[2]
                 p1.alt = tp[3]
+                #check that we don't divide by 0
                 if currentTime-lastTime > 0:
                     speed.append(3.6*garmin.distance(p1, p2)/(currentTime-lastTime))
                 else:
@@ -101,13 +118,45 @@ class PlotPanel(wx.Panel):
         self.toolbar.update()
         self.Refresh()
 
+    def plotDistanceAltitude(self):
+        """ Plot a Distance / Altitude Graph """
+        distance = []
+        alt = []
+        tplist = self.db.ListTrackPoints(self.trackId)
+        p2 = False
+        for tp in tplist:
+            alt.append(int(tp[3]))
+            if not p2:
+                lastDistance=0
+                p2 = garmin.D301()
+                p2.slon = tp[1]
+                p2.slat = tp[2]
+                p2.alt = tp[3]
+            else:
+                p1 = garmin.D301()
+                p1.slon = tp[1]
+                p1.slat = tp[2]
+                p1.alt = tp[3]
+                lastDistance+=garmin.distance(p1, p2)
+                p2=p1
+            distance.append(lastDistance)
+        self.axes.plot(distance, alt)
+        self.axes.grid(True)
+        self.axes.set_xlabel("Meters")
+        self.axes.set_ylabel("Meters")
+        self.axes.set_title("Distance / Altitude Graph")
+
+        self.toolbar.update()
+        self.Refresh()
+
     def plotTimeTotalDistance(self):
+        """ Plot a Time / Total Distance Graph """
         time = []
         distance = []
         tplist = self.db.ListTrackPoints(self.trackId)
         p2 = False
         for tp in tplist:
-            time.append(int(tp[4])-int(tplist[0][4]))
+            time.append(int(tp[4]) - int(tplist[0][4]))
             if not p2:
                 lastDistance=0
                 p2 = garmin.D301()
@@ -124,9 +173,9 @@ class PlotPanel(wx.Panel):
             distance.append(lastDistance)
         self.axes.plot(time, distance)
         self.axes.grid(True)
-        self.axes.set_xlabel("Seconds")
+        self.axes.set_xlabel("Meters")
         self.axes.set_ylabel("Meters")
-        self.axes.set_title("Time / Total Distance Graph")
+        self.axes.set_title("Distance / Altitude Graph")
 
         self.toolbar.update()
         self.Refresh()
@@ -137,14 +186,25 @@ class PlotPanel(wx.Panel):
         return self.toolbar
     
     def UpdatePanel(self, trackId):
+        """ This method updates everything s.t. it represents
+        the data for the given trackId. """
         self.trackId = trackId
 
-        if self.state=="timealt":
+        if self.state==self.graphs[0]:
             self.plotTimeAltitude()
-        elif self.state == "timedistance":
+        elif self.state == self.graphs[1]:
+            self.plotDistanceAltitude()
+        elif self.state == self.graphs[2]:
             self.plotTimeTotalDistance()
-        elif self.state == "timespeed":
+        elif self.state == self.graphs[3]:
             self.plotTimeSpeed()
+
+    def OnGraphChosen(self, event):
+        """ This method is called when a new item is selected from
+        the Choice of graphs. It updates the graph accordingly. """
+        self.state = event.GetString()
+        self.UpdatePanel(self.trackId)
+        
             
 if __name__ == '__main__':
     app = wx.PySimpleApp(0)

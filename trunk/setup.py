@@ -26,7 +26,6 @@ elif sys.platform == 'win32':
 
 setup( name = "pyTrack",
        version = "0.0.1",
-       data_files=[("database", ["database/db.dat"])],
        **{buildstyle : ['pyTrack.py']}
        )
 

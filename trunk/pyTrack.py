@@ -14,6 +14,8 @@ import time
 import sys
 import garmin
 
+import ConfigDialog
+
 from Config import *
 from TrackPanel import *
 from TrackNotebook import *
@@ -40,7 +42,7 @@ class PyTrackFrame(wx.Frame):
         mainSizer = wx.BoxSizer(wx.HORIZONTAL)
 
         #Right side of mainwindow
-        self.mainNotebook = TrackNotebook(self, -1, 1)
+        self.mainNotebook = TrackNotebook(self, -1, self.db.GetFirstTrack())
 
         #Left side of mainwindow
         leftSizer = wx.BoxSizer(wx.VERTICAL)
@@ -91,6 +93,7 @@ class PyTrackFrame(wx.Frame):
         mainSizer.Add(self.mainNotebook, 1, wx.ALL|wx.EXPAND, 5)
         
         self.SetSizer(mainSizer)
+
         self.SetAutoLayout(True)
         self.Layout()
         self.Fit()
@@ -107,8 +110,8 @@ class PyTrackFrame(wx.Frame):
         sb = wx.StatusBar(self, -1)
         self.sb = sb
         self.SetStatusBar(sb)
+        self.SetMenuBar(self.CreateMenuBar())
         
-        pass
 
     # Button Events
     def OnGetButton(self, event):
@@ -135,11 +138,9 @@ class PyTrackFrame(wx.Frame):
                     'ACTIVE LOG', 'ACTIVE LOG '+time.asctime(time.localtime()))
 
                 if dlg2.ShowModal() == wx.ID_OK:
-                    t[0].trk_ident == dlg2.GetValue()
-
+                    t[0].trk_ident = dlg2.GetValue()
                 dlg2.Destroy()
             ret = self.db.WriteTrack(t)
-            print ret
             if ret == -1:
                 self.MessageDialog("Error while saving the track "+t[0].trk_ident, "DB error")
             elif ret == -2:
@@ -192,7 +193,7 @@ class PyTrackFrame(wx.Frame):
         self.Destroy()
 
         if(self.GPSInit):
-            #self.phys.close()
+            self.garmin.Close()
             pass
 
     def OnNotYetImplemented(self, event):
@@ -216,10 +217,40 @@ class PyTrackFrame(wx.Frame):
         if(not self.GPSInit):
             self.GPSInit = True
             #connect the serial link
-            self.phys = garmin.SerialLink(serialDevice)
+            self.phys = garmin.SerialLink(self.db.GetSerialDevice())
             #connect to the garmin
             self.gps = garmin.Garmin(self.phys)
 
+    def CreateMenuBar(self):
+        """ Creates the menubar with menues """
+        menuBar = wx.MenuBar()
+        FileMenu = wx.Menu()
+        FileMenu.Append(101, "&Quit", "Quits the program.")
+        menuBar.Append(FileMenu, "&File")
+
+        ToolsMenu = wx.Menu()
+        ToolsMenu.Append(201, "&Configuration", "Opens the configuration dialog.")
+        menuBar.Append(ToolsMenu, "&Tools")
+
+        #bind the events to methods
+        self.Bind(wx.EVT_MENU, self.OnCloseWindow, id=101)
+        self.Bind(wx.EVT_MENU, self.ConfigDialog, id=201)
+
+        return menuBar
+
+    def ConfigDialog(self, event=None):
+        dlg = ConfigDialog.ConfigDialog(self, -1, "Configuration", size=(350, 200),
+                                        #style = wxCAPTION | wxSYSTEM_MENU | wxTHICK_FRAME
+                                        style = wx.DEFAULT_DIALOG_STYLE
+                                        )
+        dlg.CenterOnScreen()
+
+        # this does not return until the dialog is closed.
+        val = dlg.ShowModal()
+
+        dlg.Destroy()
+        
+    
 
 ##-------------- Main program
 
