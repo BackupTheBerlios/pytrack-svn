@@ -2,10 +2,11 @@
 """
 import sqlite
 import types
+import os
 from sqlite import *
 from sqlite import DatabaseError
 
-def DBOpen(dblogin='db.dat'):
+def DBOpen(dblogin=os.path.join('database', 'db.dat')):
     global _db
     if Database.db == None:
         try:
