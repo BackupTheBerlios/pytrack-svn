@@ -11,7 +11,7 @@
 #from wxPython.wx import *
 import wx
 import time
-import sys
+import os, sys
 import garmin
 
 import ConfigDialog
@@ -29,6 +29,7 @@ class PyTrackFrame(wx.Frame):
                  size=wx.DefaultSize, style=wx.DEFAULT_FRAME_STYLE):
         """ Initialize the class """
         wx.Frame.__init__(self, parent, ID, title, pos, size, style)
+
         DBOpen()
         self.db = CachedDb()
 
@@ -257,6 +258,20 @@ class PyTrackFrame(wx.Frame):
 ##-------------- Main program
 
 if __name__ == '__main__':
+    #Check if the database already existes, else, create it
+    try:
+        exists = os.stat(dbfile)
+    except OSError:
+        #file does not exist yet. Create it
+        if sys.platform == "posix" or sys.platform == "darwin":
+            try:
+                os.mkdir(os.environ["HOME"]+"/.pytrack")
+            except OSError:
+                #do nothing if the path already exists
+                pass
+            
+        createDb(dbfile)
+
     app = wx.PySimpleApp()
 
     win = PyTrackFrame(None, -1, "pyTrack %s" % (VERSION),
