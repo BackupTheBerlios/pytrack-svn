@@ -3,4 +3,10 @@ sqlite
 sqlite-dev
 pysqlite
 pyserial
+pygarmin
 wxpython 2.5
+
+To install pygarmin on Windows:
+- install the win32all extensions
+- install the pyserial package from http://pyserial.sf.net
+- install pygarmin

@@ -13,14 +13,20 @@ class TrackPanel(wx.Panel):
         self.db = CachedDb()
 
         self.trackNotebook = trackNotebook
+
+        id = wx.NewId()
+        self.labelChoice = wx.Choice(self, id, (100, 50), choices = ['all'])
+        self.activeLabel = 0
+        self.Bind(wx.EVT_CHOICE, self.EvtLabelChoice, self.labelChoice)
         
         id = wx.NewId()
         self.list = wx.ListBox(self, id)
         wx.EVT_LISTBOX(self, id, self.OnTrackSelect)
 
-        mainSizer = wx.BoxSizer(wx.HORIZONTAL)
+        mainSizer = wx.BoxSizer(wx.VERTICAL)
 
-        mainSizer.Add(self.list, 1, wx.ALL|wx.EXPAND, 5)
+        mainSizer.Add(self.labelChoice, 0, wx.ALL|wx.EXPAND, 0)
+        mainSizer.Add(self.list, 1, wx.ALL|wx.EXPAND, 0)
 
         self.SetSizer(mainSizer)
 
@@ -32,7 +38,14 @@ class TrackPanel(wx.Panel):
         """ Updates the list and adds new list entries from
         the database. """
         
-        tracks = self.db.ListTracks()
+        labels = self.db.ListLabels()
+        self.labelChoice.Clear()
+        self.labelChoice.Append('all', -1)
+        for label in labels:
+            self.labelChoice.Append(label[1], label[0])
+        self.labelChoice.SetSelection(self.activeLabel)
+
+        tracks = self.db.ListTracks(self.labelChoice.GetClientData(self.activeLabel))
         self.list.Clear()
         for track in tracks:
             self.list.Append(track[1], track[0])
@@ -40,8 +53,13 @@ class TrackPanel(wx.Panel):
     def OnTrackSelect(self, event):
         """ This method is executed when an entry in the
         listbox is selected. """
-        #we can savely take 0 since we can only select 1 entry
-        self.trackNotebook.SetTrackId(self.list.GetClientData(self.list.GetSelections()[0]))
+        self.trackNotebook.SetTrackId(self.list.GetClientData(self.list.GetSelection()))
+
+    def EvtLabelChoice(self, event):
+        self.activeLabel = self.labelChoice.GetSelection()
+        self.Update()
 
     def SetTrackNotebook(self, trackNotebook):
+        """ Sets the notebook for a specific track. """
         self.trackNotebook = trackNotebook
+

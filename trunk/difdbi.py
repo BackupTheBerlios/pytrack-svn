@@ -94,12 +94,30 @@ class Database:
         else:
             return -1
 
-    def ListTracks(self):
+    def ListTracks(self, labelId=-1):
         """ Returns a list with tracks and their id. """
-        sqlError = self.Sql("SELECT id, name FROM tracks")
+        if labelId == -1:
+            sqlError = self.Sql("SELECT id, name FROM tracks")
+        else:
+            sqlError = self.Sql("""
+            SELECT t.id, t.name
+            FROM tracks AS t, labels AS l, labeltrackrelation AS ltr
+            WHERE t.id=ltr.trackid AND l.id=ltr.labelid AND l.id=%d
+            """%(labelId,))
+            
         if sqlError:
             print sqlError
-            return null
+            return []
+        else:
+            return self.FetchAll()
+            
+        
+    def ListLabels(self):
+        """ Returns a list with labels and their id. """
+        sqlError = self.Sql("SELECT id, name FROM labels")
+        if sqlError:
+            print sqlError
+            return []
         else:
             return self.FetchAll()
         
@@ -108,16 +126,36 @@ class Database:
         sqlError = self.Sql("SELECT id, slon, slat, alt, time FROM trackpoints WHERE trackid=%d"%trackId)
         if sqlError:
             print sqlError
-            return null
+            return []
         else:
             return self.FetchAll()
 
-    def DeleteTrackPoints(self, trackId):
+    def DeleteTrackPoints(self, trackPointId):
         """ Deletes a track point from the list. """
-        sqlError = self.Sql("DELETE FROM trackpoints WHERE id="+str(trackId))
+        sqlError = self.Sql("DELETE FROM trackpoints WHERE id="+str(trackPointId))
         if sqlError:
             print sqlError
         
+    def DeleteTrack(self, trackId):
+        """ Deletes a track and his associated track points. """
+        sqlError = self.Sql("DELETE FROM trackpoints WHERE trackid=%d"%(trackId,))
+        if sqlError:
+            print sqlError
+        else:
+            sqlError = self.Sql("DELETE FROM tracks WHERE id=%d"%(trackId,))
+            if sqlError:
+                print sqlError
+            else:
+                self.Commit()
+                
+    def RenameTrack(self, trackId, newName):
+        """ Renames a track """
+        sqlError = self.Sql("UPDATE tracks SET name='%s' WHERE id=%d"%(newName, trackId))
+        if sqlError:
+            print sqlError
+        else:
+            self.Commit()
+
     def NextId(self, table):
         """ Returns the next id of the given table. """
         self.Sql("SELECT max(id)+1 FROM %s"% table)
@@ -155,6 +193,25 @@ if __name__ == '__main__':
     if sqlError:
         print sqlError
 
+    sqlError = db.Sql('''
+    CREATE TABLE labels (
+      id INT PRIMARY KEY,
+      name VARCHAR(100),
+      description VARCHAR(255)
+    )
+    ''')
+    if sqlError:
+        print sqlError
+
+    sqlError = db.Sql('''
+    CREATE TABLE labeltrackrelation (
+      labelid INT PRIMARY KEY REFERENCES labels(id),
+      trackid INT REFERENCES tracks(id)
+    )
+    ''')
+    if sqlError:
+        print sqlError
+
     sqlError = db.Sql("INSERT INTO tracks VALUES (1, 'First Test', 'just a test', '12/8/04 12:00')")
     if sqlError:
         print sqlError
@@ -162,6 +219,12 @@ if __name__ == '__main__':
     if sqlError:
         print sqlError
     sqlError = db.Sql("INSERT INTO trackpoints VALUES (2, 1, 46.533456, 6.5345, '12345', 310, 0)")
+    if sqlError:
+        print sqlError
+    sqlError = db.Sql("INSERT INTO labels VALUES (1, 'running training', '')")
+    if sqlError:
+        print sqlError
+    sqlError = db.Sql("INSERT INTO labeltrackrelation VALUES (1, 2)")
     if sqlError:
         print sqlError
     db.Commit()

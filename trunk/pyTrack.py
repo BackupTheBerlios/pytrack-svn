@@ -51,7 +51,7 @@ class PyTrackFrame(wx.Frame):
         self.chooserNotebook.AddPage(self.tp, "Tracks")
 
         ## the action panel
-        self.actionPanel = wx.GridSizer(2,2)
+        self.actionPanel = wx.GridSizer(3,2)
 
         id = wx.NewId()
         importButton = wx.Button(self, id, "Import")
@@ -69,12 +69,22 @@ class PyTrackFrame(wx.Frame):
         sendButton = wx.Button(self, id, "Send To GPS")
         wx.EVT_BUTTON(self, id, self.OnNotYetImplemented)
 
-        self.actionPanel.Add(importButton, 0, wx.ALL, 5)
-        self.actionPanel.Add(exportButton, 0, wx.ALL, 5)
-        self.actionPanel.Add(getButton, 0, wx.ALL, 5)
-        self.actionPanel.Add(sendButton, 0, wx.ALL, 5)
+        id = wx.NewId()
+        removeButton = wx.Button(self, id, "Remove")
+        wx.EVT_BUTTON(self, id, self.OnRemoveButton)
 
-        leftSizer.Add(self.chooserNotebook, 1, wx.ALL|wx.EXPAND, 5)
+        id = wx.NewId()
+        renameButton = wx.Button(self, id, "Rename")
+        wx.EVT_BUTTON(self, id, self.OnRenameButton)
+
+        self.actionPanel.Add(importButton, 1, wx.ALL|wx.EXPAND, 5)
+        self.actionPanel.Add(exportButton, 1, wx.ALL|wx.EXPAND, 5)
+        self.actionPanel.Add(getButton, 1, wx.ALL|wx.EXPAND, 5)
+        self.actionPanel.Add(sendButton, 1, wx.ALL|wx.EXPAND, 5)
+        self.actionPanel.Add(removeButton, 1, wx.ALL|wx.EXPAND, 5)
+        self.actionPanel.Add(renameButton, 1, wx.ALL|wx.EXPAND, 5)
+
+        leftSizer.Add(self.chooserNotebook, 1, wx.ALL|wx.EXPAND, 0)
         leftSizer.Add(self.actionPanel, 0, wx.ALL, 5)
 
         mainSizer.Add(leftSizer, 0, wx.ALL|wx.EXPAND, 5)
@@ -149,6 +159,34 @@ class PyTrackFrame(wx.Frame):
         dlg.Destroy()
         self.tp.Update()
         
+    def OnRemoveButton(self, event):
+        """ Is executed when RemoveButton is clicked. Shows a Yes/No dialog to
+        approve the deletion of a track. """
+        trackId = self.tp.list.GetClientData(self.tp.list.GetSelections()[0])
+        trackName = self.tp.list.GetStringSelection()
+        dlg = wx.MessageDialog(self, 'Are you sure you want to delete track "%s"?'%(trackName, ),
+                               'Remove Track',
+                               wx.YES_NO| wx.ICON_EXCLAMATION
+                               )
+        if dlg.ShowModal() == wx.ID_YES:
+            self.db.DeleteTrack(trackId)
+            self.tp.Update()
+        
+        dlg.Destroy()
+
+    def OnRenameButton(self, event):
+        """ Is executed when RenameButton is clicked. Shows a TextEntry dialog
+        to get the new name for the Track."""
+        trackId = self.tp.list.GetClientData(self.tp.list.GetSelections()[0])
+        trackName = self.tp.list.GetStringSelection()
+        dlg = wx.TextEntryDialog(self, 'Please enter the new name for this track:',
+                                 'Rename Track', str(trackName))
+
+        if dlg.ShowModal() == wx.ID_OK:
+            self.db.RenameTrack(trackId, dlg.GetValue())
+            self.tp.Update()
+        dlg.Destroy()
+
     # Callbacks
     def OnCloseWindow(self, event):
         self.Destroy()

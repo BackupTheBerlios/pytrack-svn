@@ -97,20 +97,14 @@ class StatisticsPanel(wx.Panel):
         DBOpen('test.dat')
         self.db = CachedDb()
 
-        self.totalDistanceLabel = wx.StaticText(self, -1, " m")
-        self.totalTimeLabel = wx.StaticText(self, -1, " min")
-        self.averageSpeedLabel = wx.StaticText(self, -1, " km/h")
+        self.totalDistanceLabel = wx.StaticText(self, -1, " m", (120, 10), (120,-1), style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
+        self.totalTimeLabel = wx.StaticText(self, -1, " min", (120, 30), (120,-1), style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
+        self.averageSpeedLabel = wx.StaticText(self, -1, " km/h", (120, 50), (120,-1), style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
         self.Update(self.trackId)
 
-        self.gridSizer = wx.GridSizer(3, 2)
-        self.gridSizer.Add(wx.StaticText(self, -1, "Total Distance:"))
-        self.gridSizer.Add(self.totalDistanceLabel)
-        self.gridSizer.Add(wx.StaticText(self, -1, "Total Time: "))
-        self.gridSizer.Add(self.totalTimeLabel)
-        self.gridSizer.Add(wx.StaticText(self, -1, "Average Speed: "))
-        self.gridSizer.Add(self.averageSpeedLabel)
-
-        self.SetSizer(self.gridSizer)
+        wx.StaticText(self, -1, "Total Distance:", (20, 10))
+        wx.StaticText(self, -1, "Total Time: ", (20, 30))
+        wx.StaticText(self, -1, "Average Speed: ", (20, 50))
         
     def Update(self, trackId):
         self.trackId = trackId
@@ -131,8 +125,8 @@ class StatisticsPanel(wx.Panel):
             self.averageSpeed=(totalDistance/1000.0)/(self.totalTime/3600.0)
         else:
             self.averageSpeed=0
-        self.totalDistanceLabel.SetLabel(str(self.totalDistance)+"m")
-        self.totalTimeLabel.SetLabel(str(self.totalTime/3600)+"h "+str(self.totalTime%3600/60)+"min "+str(self.totalTime%60)+"s")
-        self.averageSpeedLabel.SetLabel(str(self.averageSpeed) + " km/h")
+        self.totalDistanceLabel.SetLabel("%7.1f m"%(self.totalDistance,))
+        self.totalTimeLabel.SetLabel("%d h %d min %d s"%(self.totalTime/3600,self.totalTime%3600/60,self.totalTime%60))
+        self.averageSpeedLabel.SetLabel("%7.1f km/h"%(self.averageSpeed,))
         
         
