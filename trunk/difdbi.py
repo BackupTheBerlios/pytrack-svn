@@ -161,9 +161,9 @@ class Database:
         if sqlError:
             print sqlError
             return
-        [id] = self.FetchOne()
+        id = self.FetchOne()
         if id:
-            labelId = id
+            [labelId] = id
         else:
             #label does not exist. create it
             labelId = self.NextId("labels")
@@ -176,6 +176,26 @@ class Database:
         if sqlError:
             print sqlError
             return
+        self.Commit()
+
+    def DeleteLabel(self, trackId, labelId):
+        """ Deletes a label for a track. If no other track uses this label,
+        than the label is removed. """
+        sqlError = self.Sql("DELETE FROM labeltrackrelation WHERE trackid=%d AND labelid=%d"%(trackId, labelId))
+        if sqlError:
+            print sqlError
+            return
+        sqlError = self.Sql("SELECT * FROM labeltrackrelation WHERE labelid=%d"%(labelId,))
+        if sqlError:
+            print sqlError
+            return
+        label = self.FetchOne()
+        if not label:
+            sqlError = self.Sql("DELETE FROM labels WHERE id=%d"%(labelId,))
+            if sqlError:
+                print sqlError
+                return
+        #if we get here, everything was ok.
         self.Commit()
 
             

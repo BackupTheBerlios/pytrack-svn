@@ -4,6 +4,7 @@ sys.path.append("garmin")
 import garmin
 from difdbi import *
 from TrackPointTable import *
+from PlotPanel import *
 
 class TrackNotebook(wx.Notebook):
     """
@@ -25,13 +26,17 @@ class TrackNotebook(wx.Notebook):
         self.lp = LabelPanel(self, -1, trackId)
         self.AddPage(self.lp, "Labels")
 
+        self.plotPanel = PlotPanel(self, -1, trackId)
+        self.AddPage(self.plotPanel, "Graphs")
+
     def SetTrackId(self, id):
         """ Sets a new track id and updates the panels. """
         self.trackId = id
-        self.tplp.Update(self.trackId)
-        self.sp.Update(self.trackId)
-        self.lp.Update(self.trackId)
-
+        self.tplp.UpdatePanel(self.trackId)
+        self.sp.UpdatePanel(self.trackId)
+        self.lp.UpdatePanel(self.trackId)
+        self.plotPanel.UpdatePanel(self.trackId)
+        
 class TrackPointListPanel(wx.Panel):
     """
     This panel is used to show a list of the trackpoints for the
@@ -69,9 +74,9 @@ class TrackPointListPanel(wx.Panel):
         mainSizer.Add(lowerSizer, 0, wx.ALL, 0)
         
         self.SetSizer(mainSizer)
-        self.Update(self.trackId)
+        self.UpdatePanel(self.trackId)
 
-    def Update(self, trackId):
+    def UpdatePanel(self, trackId):
         """ Update the content of the trackpoints table. """
         self.trackId = trackId
         trackPoints = self.db.ListTrackPoints(self.trackId)
@@ -80,7 +85,7 @@ class TrackPointListPanel(wx.Panel):
 
     def OnDeletePointButton(self, event):
         self.db.DeleteTrackPoints(self.trackPointTable.grid.GetGridCursorTrackId())
-        #self.Update(self.trackId)
+        #self.UpdatePanel(self.trackId)
         self.applyChangesButton.Enable(True)
 
     def OnApplyChanges(self, event):
@@ -103,13 +108,13 @@ class StatisticsPanel(wx.Panel):
         self.totalDistanceLabel = wx.StaticText(self, -1, " m", (120, 10), (120,-1), style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
         self.totalTimeLabel = wx.StaticText(self, -1, " min", (120, 30), (120,-1), style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
         self.averageSpeedLabel = wx.StaticText(self, -1, " km/h", (120, 50), (120,-1), style=wx.ALIGN_RIGHT|wx.ST_NO_AUTORESIZE)
-        self.Update(self.trackId)
+        self.UpdatePanel(self.trackId)
 
         wx.StaticText(self, -1, "Total Distance:", (20, 10))
         wx.StaticText(self, -1, "Total Time: ", (20, 30))
         wx.StaticText(self, -1, "Average Speed: ", (20, 50))
         
-    def Update(self, trackId):
+    def UpdatePanel(self, trackId):
         self.trackId = trackId
         trackPoints = self.db.ListTrackPoints(self.trackId)
         p2 = False
@@ -172,11 +177,11 @@ class LabelPanel(wx.Panel):
 
         mainSizer.Add(lowerSizer, 0, wx.ALL|wx.EXPAND, 0)
 
-        self.Update(self.trackId)
+        self.UpdatePanel(self.trackId)
 
         self.SetSizer(mainSizer)
 
-    def Update(self, trackId):
+    def UpdatePanel(self, trackId):
         self.trackId = trackId
 
         self.lc.DeleteAllItems()
@@ -197,7 +202,20 @@ class LabelPanel(wx.Panel):
     def OnAddLabelButton(self, event):
         if self.labelNameBox.GetValue() != "":
             self.db.AddLabel(self.trackId, self.labelNameBox.GetValue(), "")
-        self.Update(self.trackId)
+        self.UpdatePanel(self.trackId)
 
     def OnDeleteLabelButton(self, event):
-        print self.lc.GetStringSelection()
+        item = -1
+        while True:
+            item = self.lc.GetNextItem(item,
+                                       wx.LIST_NEXT_ALL,
+                                       wx.LIST_STATE_SELECTED)
+            if item == -1:
+                break
+    
+            #this item is selected - do whatever is needed with it
+            print "Item %s is selected."%(self.lc.GetItemText(item))
+            self.db.DeleteLabel(self.trackId, int(self.lc.GetItemText(item)))
+        self.UpdatePanel(self.trackId)
+
+
