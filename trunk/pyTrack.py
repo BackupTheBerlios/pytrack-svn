@@ -172,8 +172,10 @@ class PyTrackFrame(wx.Frame):
         if dlg.ShowModal() == wx.ID_YES:
             self.db.DeleteTrack(trackId)
             self.tp.Update()
-        
+            self.mainNotebook.SetTrackId(self.db.GetFirstTrack())
+            
         dlg.Destroy()
+        
 
     def OnRenameButton(self, event):
         """ Is executed when RenameButton is clicked. Shows a TextEntry dialog

@@ -125,13 +125,20 @@ class Database:
         sqlError = self.Sql("DELETE FROM trackpoints WHERE trackid=%d"%(trackId,))
         if sqlError:
             print sqlError
-        else:
-            sqlError = self.Sql("DELETE FROM tracks WHERE id=%d"%(trackId,))
-            if sqlError:
-                print sqlError
-            else:
-                self.Commit()
-                
+            return
+        sqlError = self.Sql("DELETE FROM tracks WHERE id=%d"%(trackId,))
+        if sqlError:
+            print sqlError
+            return
+        labels = self.ListLabels(trackId)
+        #remove the labels associated to that track.
+        for id, name, description in labels:
+            self.DeleteLabel(trackId, id)
+
+        self.Commit()
+
+        
+        
     def RenameTrack(self, trackId, newName):
         """ Renames a track """
         sqlError = self.Sql("UPDATE tracks SET name='%s' WHERE id=%d"%(newName, trackId))
@@ -195,6 +202,7 @@ class Database:
             print sqlError
             return
         label = self.FetchOne()
+        print label
         if not label:
             sqlError = self.Sql("DELETE FROM labels WHERE id=%d"%(labelId,))
             if sqlError:
